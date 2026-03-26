@@ -3,46 +3,77 @@ export default async function handler(req, res) {
     return res.status(405).send('Method Not Allowed');
   }
 
-  const body = req.body;
+  try {
+    const body = req.body;
 
-  const userText =
-    body?.request?.intent?.slots?.text?.value ||
-    body?.request?.intent?.name ||
-    'Hola';
+    const userText =
+      body?.request?.intent?.slots?.text?.value ||
+      body?.request?.intent?.name ||
+      'Hola';
 
-  const VF_API_KEY = "TU_API_KEY_DE_VOICEFLOW";
+    // 🔴 PALABRAS PARA SALIR
+    const exitWords = ['salir', 'adiós', 'terminar', 'cancelar', 'nos vemos'];
 
-  const vfRes = await fetch(
-    "https://general-runtime.voiceflow.com/state/user123/interact",
-    {
-      method: "POST",
-      headers: {
-        "Authorization": VF_API_KEY,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        request: {
-          type: "text",
-          payload: userText
+    if (exitWords.includes(userText.toLowerCase())) {
+      return res.status(200).json({
+        version: "1.0",
+        response: {
+          outputSpeech: {
+            type: "PlainText",
+            text: "Hasta luego 👋"
+          },
+          shouldEndSession: true
         }
-      })
+      });
     }
-  );
 
-  const vfData = await vfRes.json();
+    // 🔑 TU API KEY DE VOICEFLOW
+    const VF_API_KEY = "TU_API_KEY_DE_VOICEFLOW";
 
-  const reply =
-    vfData.find(r => r.type === "text")?.payload?.message ||
-    "No entendí";
+    const vfRes = await fetch(
+      "https://general-runtime.voiceflow.com/state/user123/interact",
+      {
+        method: "POST",
+        headers: {
+          "Authorization": VF_API_KEY,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          request: {
+            type: "text",
+            payload: userText
+          }
+        })
+      }
+    );
 
-  res.status(200).json({
-    version: "1.0",
-    response: {
-      outputSpeech: {
-        type: "PlainText",
-        text: reply
-      },
-      shouldEndSession: false
-    }
-  });
+    const vfData = await vfRes.json();
+
+    const reply =
+      vfData.find(r => r.type === "text")?.payload?.message ||
+      "No entendí eso.";
+
+    return res.status(200).json({
+      version: "1.0",
+      response: {
+        outputSpeech: {
+          type: "PlainText",
+          text: reply
+        },
+        shouldEndSession: false
+      }
+    });
+
+  } catch (error) {
+    return res.status(200).json({
+      version: "1.0",
+      response: {
+        outputSpeech: {
+          type: "PlainText",
+          text: "Hubo un error, intenta de nuevo."
+        },
+        shouldEndSession: false
+      }
+    });
+  }
 }
